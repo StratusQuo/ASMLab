@@ -1,9 +1,11 @@
 # ASMLab - An Interactive x86 Assembly Language REPL
 
-***Learn x86 Assembly, One Instruction at a Time***
+***Practice x86 Assembly, One Instruction at a Time***
+
+<img width="1289" alt="image" src="https://github.com/user-attachments/assets/e2351c93-ecff-4596-8fbc-61ef852c5bbb">
 
 
-
+## Intro
 `asmlab` is a powerful and interactive command-line tool that lets you test out assembly commands in a simulated environment. 
 
 This project is a reimagining of the excellent [`asmrepl`](https://github.com/tenderlove/asmrepl), but ported to Rust with the following features :
@@ -62,6 +64,9 @@ This project is a reimagining of the excellent [`asmrepl`](https://github.com/te
 
    **Single-Instruction Mode (Default):**
 
+   <img width="749" alt="image" src="https://github.com/user-attachments/assets/6713ae82-d191-4ec6-b6ae-51e5fee56734">
+
+
    - Enter a single assembly instruction (e.g., `mov rax, 5`) and press Enter to assemble and execute it.
    - Type a register name (e.g., `rax`) to see its value. 
    - Use the `memory` command to inspect memory:
@@ -70,16 +75,22 @@ This project is a reimagining of the excellent [`asmrepl`](https://github.com/te
 	 - `memory 0x100 -d`:  Dumps 16 bytes in decimal starting at `0x100`.
 
    **Multi-Instruction Mode:**
-
-   - Type `:multi` to enter this mode.
-   - Enter your assembly instructions, one per line.
+   
+   Type **`:multi`** to enter _multi-line_ mode:
+   
+   <img width="1356" alt="image" src="https://github.com/user-attachments/assets/2490c3a9-c3d9-4f97-8d6f-ab1ddb960f16">
+   
+   - Enter your assembly instructions _(one instruction per line)_
    - An empty line indicates the end of your code block.
    - Type `run` to assemble and execute the code you've entered.
 
    **Calculator Mode:**
 
-   - Type `:calc` to enter calculator mode.
-   - Perform calculations and conversions using these commands:
+   Type **`:calc`** to enter calculator mode:
+
+   <img width="897" alt="image" src="https://github.com/user-attachments/assets/b250900a-c84c-412a-8758-6be11e95f4fd">
+
+   In calc mode you can perform the following calculations and conversions using the below commands:
 	 - **`hex <value>`:** Convert a hexadecimal value to decimal and binary.
 	 - **`bin <value>`:** Convert a binary value to decimal and hexadecimal.
 	 - **`dec <value>`:** Convert a decimal value to hexadecimal and binary.
@@ -103,8 +114,14 @@ This project is a reimagining of the excellent [`asmrepl`](https://github.com/te
 
    **Script Mode:**
 
-   - Type `:script` to enter script mode.
-   - Define variables and write multi-line scripts that can use the following APL-inspired operators:
+   Type `:script` to enter script mode:
+
+   <img width="591" alt="image" src="https://github.com/user-attachments/assets/c2942af9-0352-4872-bf48-4e192e26f286">
+
+
+   _**Note:** There's still a lot of work to be done here -- there should be some fixes coming soon to make this mode more useful._
+
+   - Define variables and write multi-line scripts that can use the following arithmetic & APL operators:
 	 - **`decimal <register>`:** Display the decimal value of a register.
 	 - **`<variable> → <value>`:** Assign a value to a variable.
 	 - **`<value1> + <value2>`:** Add two values. 
