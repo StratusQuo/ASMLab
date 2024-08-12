@@ -201,21 +201,6 @@ RAX in decimal: 3
 
 
 
-## Features
-
-- **Comprehensive Instruction Set:**  Supports a wide range of x86 instructions, including arithmetic, logic, bit manipulation, control flow, stack operations, and more. 
-- **Interactive REPL:** Provides a user-friendly interface for experimenting with assembly and getting immediate feedback.
-- **Simulated CPU:**  Offers a safe environment to learn and practice assembly without risk to your system.
-- **Multiple Execution Modes:** 
-  - **Single-Instruction Mode:** Step through instructions one by one for debugging and analysis.
-  - **Multi-Instruction Mode:** Write and execute short assembly programs.
-  - **Calculator Mode:** Perform calculations and conversions related to binary, hexadecimal, and decimal numbers, as well as trigonometric and bitwise operations.
-  - **Script Mode:** Define variables and write more complex scripts using a custom syntax inspired by APL.
-- **Syntax Highlighting:** Assembly instructions are highlighted for improved readability.
-- **Visual Register Representation:**  Visualize register values as binary strings, making it easier to understand bitwise operations and flag manipulation.
-
-
-
 ## Contributing
 
 Contributions are welcome! If you find bugs, have feature suggestions, or want to contribute to the codebase, please open an issue or submit a pull request on GitHub.
