@@ -5,43 +5,106 @@ use colored::*;
 mod cpu;
 mod parser;
 mod assembler;
+mod calculator;
+mod script_mode;
+mod syntax_highlighter;
+mod user_functions;
 
 use cpu::CPU;
-use parser::{parse_input, Instruction, InputType};
+use parser::{parse_input, parse_instruction, Instruction, InputType};
 use assembler::assemble_instruction;
+use calculator::calculate;
+//use script_mode::execute_script;
+use syntax_highlighter::highlight_syntax;
+use script_mode::ScriptEnvironment;
+
+
+
+#[derive(Debug, PartialEq)]
+enum ReplMode {
+    Single,
+    Multi,
+    Calculator,
+    Script,
+}
+
+//╔═══════════════════════════════════════════════════════════════════╗ 
+//║   ⇩ Main Loop                                                     ║  
+//╚═══════════════════════════════════════════════════════════════════╝
 
 fn main() -> rustyline::Result<()> {
     let mut cpu = CPU::new();
     let mut rl = DefaultEditor::new()?;
+    let mut code_buffer: Vec<String> = Vec::new();
+    let mut repl_mode = ReplMode::Single;
+    let mut script_env = ScriptEnvironment::new();
+    user_functions::load_user_functions(&mut script_env);
 
-    println!("{}", "Welcome to the Assembly REPL!".green().bold());
-    println!("Type '{}' to quit, '{}' for detailed state, '{}' for compact state, or enter an assembly instruction.", 
-             "exit".italic().yellow(), 
-             "state".italic().yellow(),
-             "cpu".italic().yellow());
+    println!("{}", "Welcome to the Enhanced Assembly REPL!".green().bold());
+    print_help();
 
     loop {
-        let readline = rl.readline(">> ".cyan().bold().to_string().as_str());
+        let prompt = match repl_mode {
+            ReplMode::Single => ">> ".cyan().bold().to_string(),
+            ReplMode::Multi => format!("{} ", " MULTI ".on_truecolor(188, 71, 73).truecolor(242, 232, 207).bold()),
+            ReplMode::Calculator => format!("{} ", " CALC ".on_green().white().bold()),
+            ReplMode::Script => format!("{} ", " SCRIPT ".on_magenta().white().bold()),
+        };
+
+        let readline = rl.readline(prompt.as_str());
+
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str())?;
-                match line.trim() {
+                let highlighted_input = highlight_syntax(&line);
+                println!("{}", highlighted_input);
+
+                let trimmed = line.trim();
+                match trimmed {
                     "exit" => break,
-                    "state" => display_detailed_cpu_state(&cpu),
+                    "help" => print_help(),
                     "cpu" => display_compact_cpu_state(&cpu),
+                    "state" => display_detailed_cpu_state(&cpu),
+                    ":single" => {
+                        repl_mode = ReplMode::Single;
+                        println!("Switched to single-instruction mode.");
+                    }
+                    ":multi" => {
+                        repl_mode = ReplMode::Multi;
+                        println!("Switched to multiple-instruction mode.");
+                    }
+                    ":calc" => {
+                        repl_mode = ReplMode::Calculator;
+                        println!("Switched to calculator mode.");
+                    }
+                    ":script" => {
+                        repl_mode = ReplMode::Script;
+                        println!("Switched to script mode.");
+                    }
+                    "run" => {
+                        if repl_mode == ReplMode::Multi {
+                            execute_multi_instructions(&mut cpu, &code_buffer);
+                            code_buffer.clear();
+                        } else {
+                            println!("{} 'run' is only available in multi-instruction mode.", "ERROR:".red());
+                        }
+                    }
                     input => {
-                        match parse_input(input) {
-                            Ok((_, InputType::Instruction(instruction))) => {
-                                process_instruction(&instruction, &mut cpu);
+                        match repl_mode {
+                            ReplMode::Single => handle_single_instruction(input, &mut cpu),
+                            ReplMode::Multi => code_buffer.push(input.to_string()),
+                            ReplMode::Calculator => {
+                                match calculate(input, &cpu) {
+                                    Ok(result) => println!("{}", result),
+                                    Err(e) => println!("{} {}", "Calculation error:".red(), e),
+                                }
                             }
-                            Ok((_, InputType::Register(register, options))) => {
-                                let formatted_value = cpu.format_register_value(&register, &options);
-                                println!("{}", formatted_value);
+                            ReplMode::Script => {
+                                match script_env.execute_script(input, &cpu) {
+                                    Ok(result) => println!("{}", result),
+                                    Err(e) => println!("{} {}", "Script error:".red(), e),
+                                }
                             }
-                            Ok((_, InputType::Memory(options))) => {
-                                cpu.dump_memory(&options);
-                            }
-                            Err(e) => println!("{} {}", "Error parsing input:".red(), e),
                         }
                     }
                 }
@@ -59,10 +122,61 @@ fn main() -> rustyline::Result<()> {
                 break
             }
         }
+        println!(); // Add extra newline for spacing
     }
 
     println!("{}", "Goodbye!".green());
     Ok(())
+}
+
+fn print_help() {
+    println!("\n{}", "Available commands:".yellow().bold());
+    println!("  {} - Exit the REPL", "exit".italic());
+    println!("  {} - Display this help message", "help".italic());
+    println!("  {} - Display compact CPU state", "cpu".italic());
+    println!("  {} - Display detailed CPU state", "state".italic());
+    println!("  {} - Switch to single-instruction mode", ":single".italic());
+    println!("  {} - Switch to multiple-instruction mode", ":multi".italic());
+    println!("  {} - Switch to calculator mode", ":calc".italic());
+    println!("  {} - Switch to script mode", ":script".italic());
+    println!("  {} - Execute instructions in multi-instruction mode", "run".italic());
+    println!();
+}
+
+//╔═══════════════════════════════════════════════════════════════════╗ 
+//║   ⇩ Instruction Processing                                        ║  
+//╚═══════════════════════════════════════════════════════════════════╝
+
+fn handle_single_instruction(input: &str, cpu: &mut CPU) {
+    match parse_input(input) {
+        Ok((_, InputType::Instruction(instruction))) => {
+            process_instruction(&instruction, cpu);
+        }
+        Ok((_, InputType::Register(register, options))) => {
+            let formatted_value = cpu.format_register_value(&register, &options);
+            println!("{}", formatted_value);
+        }
+        Ok((_, InputType::Memory(options))) => {
+            cpu.dump_memory(&options);
+        }
+        Err(e) => println!("{} {}", "Error parsing input:".red(), e),
+    }
+}
+
+fn execute_multi_instructions(cpu: &mut CPU, instructions: &[String]) {
+    for (i, instruction_str) in instructions.iter().enumerate() {
+        match parse_instruction(instruction_str) {
+            Ok((_, instruction)) => {
+                println!("Executing: {}", instruction_str);
+                process_instruction(&instruction, cpu);
+            }
+            Err(e) => {
+                println!("{} Error in instruction {}: {}", "ERROR:".red(), i + 1, e);
+                return;
+            }
+        }
+    }
+    println!("{}", "All instructions executed successfully.".green());
 }
 
 fn process_instruction(instruction: &Instruction, cpu: &mut CPU) {
@@ -72,21 +186,64 @@ fn process_instruction(instruction: &Instruction, cpu: &mut CPU) {
             cpu.execute(instruction);
             println!("{}", "Instruction executed.".green());
         },
-        Err(e) => println!("{} {}", " ERROR ".on_truecolor(188, 44, 26), e),
+        Err(e) => println!("{} {}", "ERROR:".red(), e),
     }
 }
+
+//╔═══════════════════════════════════════════════════════════════════╗ 
+//║   ⇩ Register Visualization                                        ║  
+//╚═══════════════════════════════════════════════════════════════════╝
 
 fn visualize_register(name: &str, value: u64) {
     let bits = format!("{:064b}", value);
     let visualization = bits.chars()
-        .map(|c| if c == '1' { "█".bright_green() } else { "▁".dimmed() })
-        .collect::<Vec<_>>()
-        .chunks(8)
-        .map(|chunk| chunk.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(""))
-        .collect::<Vec<_>>()
-        .join(" ");
-    
-    println!("{:<4} {} {:#018x}", name, visualization, value);
+        .enumerate()
+        .map(|(i, c)| {
+            let color = get_bit_color(i);
+            if c == '1' {
+                "█".color(color)
+            } else {
+                "▁".white()
+            }
+        })
+        .enumerate()
+        .map(|(i, colored_char)| {
+            if (i + 1) % 8 == 0 && i < 63 {
+                format!("{} ", colored_char)
+            } else {
+                colored_char.to_string()
+            }
+        })
+        .collect::<String>();
+
+    println!("{:<4} {} {:#018x}", name.white(), visualization, value);
+}
+
+fn get_bit_color(index: usize) -> Color {
+    const COLOR_RANGES: [[(u8, u8, u8); 8]; 8] = [
+        // Burg
+        [(255,235,238), (255,205,210), (239,154,154), (229,115,115), (239,83,80), (244,67,54), (211,47,47), (183,28,28)],
+        // BurgYl
+        [(255,248,225), (255,236,179), (255,224,130), (255,202,40), (255,167,38), (251,140,0), (245,124,0), (230,81,0)],
+        // RedOr
+        [(255,243,224), (255,224,178), (255,204,128), (255,183,77), (255,152,0), (251,140,0), (245,124,0), (230,81,0)],
+        // OrYel
+        [(255,253,231), (255,249,196), (255,245,157), (255,241,118), (255,238,88), (255,235,59), (253,216,53), (251,192,45)],
+        // Peach
+        [(255,248,225), (255,236,179), (255,224,130), (255,213,79), (255,202,40), (255,193,7), (255,179,0), (255,160,0)],
+        // PinkYl
+        [(252,228,236), (255,205,210), (255,171,145), (255,138,101), (255,112,67), (255,87,34), (244,81,30), (230,74,25)],
+        // Mint
+        [(224,242,241), (178,223,219), (128,203,196), (77,182,172), (38,166,154), (0,150,136), (0,137,123), (0,121,107)],
+        // BluGrn
+        [(224,242,241), (178,223,219), (128,203,196), (77,182,172), (38,166,154), (0,150,136), (0,137,123), (0,121,107)],
+    ];
+
+    let octal = index / 8;
+    let position_in_octal = index % 8;
+
+    let (r, g, b) = COLOR_RANGES[octal][position_in_octal];
+    Color::TrueColor { r, g, b }
 }
 
 fn visualize_xmm_register(name: &str, value: u128) {
@@ -108,7 +265,7 @@ fn visualize_xmm_register(name: &str, value: u128) {
         .map(|chunk| chunk.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(""))
         .collect::<Vec<_>>()
         .join(" ");
-    
+
     println!("{:<5} {}", name, visualization);
 }
 
