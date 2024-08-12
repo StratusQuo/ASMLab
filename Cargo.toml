@@ -1,0 +1,17 @@
+[package]
+name = "asmrepl-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# "7" is utilized for the REPL's Parser:
+nom = "7"
+rustyline = "14.0.0"
+colored = "2.0.0"
+
+
+[dependencies.iced-x86]
+# "Iced X86" is utilized for X86 Assembly and Disassembly:
+version = "1.21.0"
+default-features = true
+features = ["std", "code_asm", "exhaustive_enums"]
