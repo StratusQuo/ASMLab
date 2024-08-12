@@ -40,7 +40,7 @@ fn main() -> rustyline::Result<()> {
     let mut script_env = ScriptEnvironment::new();
     user_functions::load_user_functions(&mut script_env);
 
-    println!("{}", "Welcome to the Enhanced Assembly REPL!".green().bold());
+    println!("{}", "Welcome to the ASMLab Assembly REPL!".green().bold());
     print_help();
 
     loop {
